@@ -1,0 +1,6 @@
+# binary and text files
+audio/
+transcriptions/
+
+# system files
+.DS_STORE
