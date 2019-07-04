@@ -1,40 +1,26 @@
-import speech_recognition as sr
-from os import path
 from pydub import AudioSegment
 import argparse
+import re
+from Audio_Converter import Audio_Converter
 
 parser = argparse.ArgumentParser(description='Transcribe an mp3 file to text!')
 
-parser.add_argument('--inputFile', type=str, nargs=1, required=True,
-    help='The path to the mp3 file you wish to transcribe')
-parser.add_argument('--outputFile', type=str, nargs=1, required=True,
-    help='The path to the text file that will be output')
-parser.add_argument('--chunkSize', type=int, nargs=1, required=False,
-    default=30, help='Duration in seconds of one cycle of transcription')
+parser.add_argument('inputFile', type=str, help='The path to the mp3 file you wish to transcribe')
+parser.add_argument('outputFile', type=str, help='The path to the text file that will be output')
+parser.add_argument('--pauseDuration', type=int, nargs=1, required=False,
+    default=500, help='Duration in milliseconds to wait before breaking a phrase')
+parser.add_argument('--deleteInputFile', type=bool, nargs='?', required=False,
+    const=True, default=False, help='Whether to delete the initial mp3 file once it has been fully transcribed')
 
 args = parser.parse_args()
 inputFile = args.inputFile
 outputFile = args.outputFile
-# transcribe the file in shorter pieces
-record_duration = args.chunkSize
+pause_duration = args.pauseDuration
 
 # convert mp3 file to wav                                                       
 sound = AudioSegment.from_mp3(inputFile)
-sound.export("./audio/transcript.wav", format="wav")
+AUDIO_FILE = inputFile.replace('.mp3', '.wav')
+sound.export(AUDIO_FILE, format="wav")
 
-# transcribe audio file                                                         
-AUDIO_FILE = "./audio/transcript.wav"
-
-def parse_google(recognizer, audio):
-    with open(outputFile, 'a') as f:
-        f.write(recognizer.recognize_google(audio) + '\n')
-
-# use the audio file as the audio source                                        
-r = sr.Recognizer()
-with sr.AudioFile(AUDIO_FILE) as source:
-    while not source.stream is None:
-        try:
-            audio = r.record(source, record_duration)
-            parse_google(r, audio)
-        except sr.UnknownValueError:
-            print('Could not recognize word, continuing...')
+converter = Audio_Converter(AUDIO_FILE, outputFile, pause_duration)
+converter.transcribe()

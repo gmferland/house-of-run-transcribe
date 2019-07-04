@@ -4,3 +4,4 @@ transcriptions/
 
 # system files
 .DS_STORE
+__pycache__
