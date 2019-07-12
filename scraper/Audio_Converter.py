@@ -25,22 +25,28 @@ class Audio_Converter:
         # store the audio files.
         os.chdir('audio_chunks')
 
+        i = 0
+        # store chunks as files in directory
+        for chunk in chunks:
+            # the name of the newly created chunk
+            filename = 'chunk' + str(i) + '.wav'
+            print('Processing ' + filename)
+            self._process_chunk(chunk, filename)
+            i += 1
+
+        print('Successfully saved ' + str(len(chunks)) + ' chunks')
+
         # create a speech recognition object
         recognizer = sr.Recognizer()
 
-        i = 0
         # create the file that we will write the text to
         with open(self.outputFileName, 'w') as outFile:
             # process each chunk
             for chunk in chunks:
-                # the name of the newly created chunk
-                filename = 'chunk' + str(i) + '.wav'
-                print('Processing ' + filename)
-                self._process_chunk(chunk, filename)
+                # filename isn't in scope here ya idiot!
                 text = self._listen_to_audio(filename, recognizer)
-                outFile.write(text + '. ')
-                i += 1
-
+                outFile.write(str(text) + '. ')
+                
         os.chdir('..')
         print('Finished transcribing ' + self.inputFileName)
 
@@ -52,22 +58,23 @@ class Audio_Converter:
         # split track where silence is 0.5 seconds
         # or more and get chunks
         chunks = split_on_silence(song,
-            # must be silent for at least 0.5 seconds
-            # or 500 ms. adjust this value based on user
-            # requirement. if the speaker stays silent for
-            # longer, increase this value. else, decrease it.
+            # must be silent for at least silence_min_duration.
+            # adjust this value based on user requirement.
+            # if the speaker stays silent for longer,
+            # increase this value. else, decrease it.
             min_silence_len = silence_min_duration,
 
             # consider it silent if quieter than -16 dBFS
             # adjust this per requirement
             silence_thresh = -16
         )
+        print('Successfully split audio into ' + str(len(chunks)) + ' chunks')
 
         return chunks
 
     def _process_chunk(self, chunk, wavFileName):
         # Create 0.5 seconds silence chunk
-        chunk_silent = AudioSegment.silent(duration = 10)
+        chunk_silent = AudioSegment.silent(duration = 500)
         # add 0.5 sec silence to beginning and
         # end of audio chunk. This is done so that
         # it doesn't seem abruptly sliced.
@@ -84,7 +91,7 @@ class Audio_Converter:
         with sr.AudioFile(inputFilePath) as source:
             try:
                 recognizer.adjust_for_ambient_noise(source)
-                audio_listened = recognizer.record(source)
+                audio_listened = recognizer.listen(source)
                 # try converting it to text
                 text = recognizer.recognize_google(audio_listened)
                 return text
