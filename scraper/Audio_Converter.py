@@ -14,39 +14,36 @@ class Audio_Converter:
     # and applies speech recognition 
     def transcribe(self): 
         chunks = self._split_into_chunks(self.inputFileName, self.silence_min_duration)
-
+        indexOfExt = self.outputFileName.find('.')
+        outputDirName = 'audio/' + self.outputFileName[:indexOfExt]
         # create a directory to store the audio chunks.
         try:
-            os.mkdir('audio_chunks')
+            os.makedirs(outputDirName)
         except(FileExistsError):
             pass
 
         # move into the directory to
         # store the audio files.
-        os.chdir('audio_chunks')
-
-        i = 0
-        # store chunks as files in directory
-        for chunk in chunks:
-            # the name of the newly created chunk
-            filename = 'chunk' + str(i) + '.wav'
-            print('Processing ' + filename)
-            self._process_chunk(chunk, filename)
-            i += 1
-
-        print('Successfully saved ' + str(len(chunks)) + ' chunks')
+        os.chdir(outputDirName)
 
         # create a speech recognition object
         recognizer = sr.Recognizer()
 
         # create the file that we will write the text to
         with open(self.outputFileName, 'w') as outFile:
-            # process each chunk
+            i = 0
+            # store chunks as files in directory
             for chunk in chunks:
-                # filename isn't in scope here ya idiot!
+                # the name of the newly created chunk
+                filename = 'chunk' + str(i) + '.wav'
+                print('Processing ' + filename)
+                self._save_chunk(chunk, filename)
                 text = self._listen_to_audio(filename, recognizer)
-                outFile.write(str(text) + '. ')
-                
+                if text is not None:
+                    # sometimes we can't recognize anything from the audio
+                    outFile.write(self._create_phrase(text))
+                i += 1
+
         os.chdir('..')
         print('Finished transcribing ' + self.inputFileName)
 
@@ -55,8 +52,8 @@ class Audio_Converter:
         # the local system as a wav file.
         song = AudioSegment.from_wav(wavFileName)
 
-        # split track where silence is 0.5 seconds
-        # or more and get chunks
+        song = song[:120000]
+
         chunks = split_on_silence(song,
             # must be silent for at least silence_min_duration.
             # adjust this value based on user requirement.
@@ -64,34 +61,26 @@ class Audio_Converter:
             # increase this value. else, decrease it.
             min_silence_len = silence_min_duration,
 
-            # consider it silent if quieter than -16 dBFS
-            # adjust this per requirement
-            silence_thresh = -16
+            # consider it silent if quieter than this threshold
+            silence_thresh = -36
         )
         print('Successfully split audio into ' + str(len(chunks)) + ' chunks')
 
         return chunks
 
-    def _process_chunk(self, chunk, wavFileName):
-        # Create 0.5 seconds silence chunk
-        chunk_silent = AudioSegment.silent(duration = 500)
-        # add 0.5 sec silence to beginning and
-        # end of audio chunk. This is done so that
-        # it doesn't seem abruptly sliced.
-        audio_chunk = chunk_silent + chunk + chunk_silent
+    def _save_chunk(self, chunk, wavFileName):
         # export audio chunk and save it in
         # the current directory.
-        print('saving' + wavFileName)
+        print('saving ' + wavFileName)
         # specify the bitrate to be 192 k
-        audio_chunk.export(wavFileName, bitrate ='192k', format ='wav')
+        chunk.export(wavFileName, bitrate ='192k', format ='wav')
 
     def _listen_to_audio(self, inputFilePath, recognizer):
         print('Listening to audio...')
         # recognize the chunk
         with sr.AudioFile(inputFilePath) as source:
             try:
-                recognizer.adjust_for_ambient_noise(source)
-                audio_listened = recognizer.listen(source)
+                audio_listened = recognizer.record(source)
                 # try converting it to text
                 text = recognizer.recognize_google(audio_listened)
                 return text
@@ -99,3 +88,8 @@ class Audio_Converter:
                 print('Could not recognize word, continuing...')
             except sr.RequestError:
                 print('Could not request results. check your internet connection')
+
+    def _create_phrase(self, text):
+        text = str(text)
+        # capitalize the first word and end with a period
+        return text[0].upper() + text[1:] + '. '

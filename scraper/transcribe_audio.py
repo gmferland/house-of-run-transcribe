@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser(description='Transcribe an mp3 file to text!')
 
 parser.add_argument('inputFile', type=str, help='The path to the mp3 file you wish to transcribe')
 parser.add_argument('outputFile', type=str, help='The path to the text file that will be output')
-parser.add_argument('--pauseDuration', type=int, nargs=1, required=False,
+parser.add_argument('--pauseDuration', type=int, required=False,
     default=1000, help='Duration in milliseconds to wait before breaking a phrase')
 parser.add_argument('--deleteInputFile', type=bool, nargs='?', required=False,
     const=True, default=False, help='Whether to delete the initial mp3 file once it has been fully transcribed')
