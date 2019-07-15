@@ -4,11 +4,12 @@ from pydub import AudioSegment
 from pydub.silence import split_on_silence
 
 class Audio_Converter:
-    def __init__(self, inputFileName, outputFileName, silence_min_duration):
+    def __init__(self, inputFileName, outputFileName, silence_min_duration, silence_threshod):
         # input file must be in wav format
         self.inputFileName = inputFileName
         self.outputFileName = outputFileName
         self.silence_min_duration = silence_min_duration
+        self.silence_threshold = silence_threshod
 
     # a function that splits the audio file into chunks 
     # and applies speech recognition 
@@ -52,7 +53,8 @@ class Audio_Converter:
         # the local system as a wav file.
         song = AudioSegment.from_wav(wavFileName)
 
-        song = song[:120000]
+        """ # work on smaller chunk for testing
+        song = song[:120000] """
 
         chunks = split_on_silence(song,
             # must be silent for at least silence_min_duration.
@@ -62,7 +64,7 @@ class Audio_Converter:
             min_silence_len = silence_min_duration,
 
             # consider it silent if quieter than this threshold
-            silence_thresh = -36
+            silence_thresh = self.silence_threshold
         )
         print('Successfully split audio into ' + str(len(chunks)) + ' chunks')
 
